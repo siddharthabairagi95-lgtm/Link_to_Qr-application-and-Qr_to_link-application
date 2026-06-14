@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Utility Suite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="page-container">
+    <div class="card hero">
+
+        <h1>🚀 QR Utility Suite</h1>
+        <p>Generate QR codes and decode QR images in one professional app ✨</p>
+
+        <div class="button-group">
+            <a href="/link-to-qr" class="main-btn">🔗 Link to QR</a>
+            <a href="/qr-to-link" class="main-btn outline">📷 QR to Link</a>
+        </div>
+
+        {% if mode == "link_to_qr" %}
+        <div class="section-box">
+            <h2>🔗 Link to QR</h2>
+            <p>Enter a URL and generate a clean black QR code.</p>
+
+            <form method="POST" action="/link-to-qr">
+                <input type="url" name="link" placeholder="https://example.com" required>
+                <button type="submit">⚡ Generate QR</button>
+            </form>
+
+            {% if qr_image %}
+            <div class="result-box">
+                <h2>✅ Your QR Code</h2>
+                <img src="{{ qr_image }}" class="qr-img">
+                <a href="{{ qr_image }}" download class="open-btn">⬇️ Download QR</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if mode == "qr_to_link" %}
+        <div class="section-box">
+            <h2>📷 QR to Link</h2>
+            <p>Upload or drag and drop a QR image to extract the link or text.</p>
+
+            <form method="POST" action="/qr-to-link" enctype="multipart/form-data">
+
+                <div class="upload-container">
+
+                    <label for="qr_image" class="upload-box" id="dropZone">
+                        <div class="upload-icon">📤</div>
+
+                        <h3>Drop your QR image here</h3>
+
+                        <p>
+                            PNG • JPG • JPEG • WEBP • GIF
+                            <br>
+                            or click to browse files
+                        </p>
+
+                        <span class="browse-btn">Browse Files</span>
+                    </label>
+
+                    <input
+                        type="file"
+                        id="qr_image"
+                        name="qr_image"
+                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                        required
+                        onchange="showFileName(this)"
+                    >
+
+                    <div id="file-name" class="selected-file">
+                        No file selected
+                    </div>
+
+                </div>
+
+                <button type="submit">🔍 Decode QR</button>
+            </form>
+
+            {% if decoded_text %}
+            <div class="result-box">
+                <h2>✅ Decoded Result</h2>
+
+                <input 
+                    type="text" 
+                    id="decodedLink" 
+                    value="{{ decoded_text }}" 
+                    readonly
+                >
+
+                <button onclick="copyLink()" class="copy-btn" type="button">📋 Copy Link</button>
+
+                {% if decoded_text.startswith("http") %}
+                <a href="{{ decoded_text }}" target="_blank" class="open-btn">
+                    🌐 Open Link
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+            <p class="error">⚠️ {{ error }}</p>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+function copyLink() {
+    const link = document.getElementById("decodedLink");
+
+    if (link) {
+        link.select();
+        link.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(link.value);
+        alert("✅ Link copied!");
+    }
+}
+
+function showFileName(input) {
+    const fileName = document.getElementById("file-name");
+
+    if (input.files.length > 0) {
+        fileName.innerHTML = "✅ " + input.files[0].name;
+    } else {
+        fileName.innerHTML = "No file selected";
+    }
+}
+
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("qr_image");
+
+if (dropZone && fileInput) {
+    dropZone.addEventListener("dragover", function(event) {
+        event.preventDefault();
+        dropZone.classList.add("drag-active");
+    });
+
+    dropZone.addEventListener("dragleave", function() {
+        dropZone.classList.remove("drag-active");
+    });
+
+    dropZone.addEventListener("drop", function(event) {
+        event.preventDefault();
+        dropZone.classList.remove("drag-active");
+
+        const files = event.dataTransfer.files;
+
+        if (files.length > 0) {
+            fileInput.files = files;
+            showFileName(fileInput);
+        }
+    });
+}
+</script>
+
+</body>
+</html>
