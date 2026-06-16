@@ -11,6 +11,16 @@
 <div class="page-container">
     <div class="card hero">
 
+        <div class="top-bar">
+            <div class="user-info">
+                👋 Hello, {{ username }}
+            </div>
+
+            <a href="/logout" class="logout-btn">
+                🚪 Logout
+            </a>
+        </div>
+
         <h1>🚀 QR Utility Suite</h1>
         <p>Generate QR codes and decode QR images in one professional app ✨</p>
 
@@ -84,10 +94,10 @@
             <div class="result-box">
                 <h2>✅ Decoded Result</h2>
 
-                <input 
-                    type="text" 
-                    id="decodedLink" 
-                    value="{{ decoded_text }}" 
+                <input
+                    type="text"
+                    id="decodedLink"
+                    value="{{ decoded_text }}"
                     readonly
                 >
 
