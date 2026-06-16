@@ -3,3 +3,4 @@ qrcode
 pillow
 opencv-python
 numpy
+gunicorn
