@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard | QR Utility Suite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="page-container">
+    <div class="card dashboard-card">
+
+        <div class="top-bar">
+            <div class="user-info">📊 {{ username }}'s Dashboard</div>
+
+            <div class="nav-actions">
+                <a href="/" class="dashboard-btn">🏠 Home</a>
+                <a href="/logout" class="logout-btn">🚪 Logout</a>
+            </div>
+        </div>
+
+        <h1>📊 Activity Dashboard</h1>
+        <p>Your QR statistics and activity history in one place.</p>
+
+        <div class="dashboard-two-column">
+
+            <div class="dashboard-panel">
+                <h2>📌 Stats</h2>
+
+                <div class="simple-stat-card">
+                    <span>🔗 QR Codes Generated</span>
+                    <strong>{{ qr_count }}</strong>
+                </div>
+
+                <div class="simple-stat-card">
+                    <span>📷 Links Decoded</span>
+                    <strong>{{ decoded_count }}</strong>
+                </div>
+
+                <div class="simple-stat-card">
+                    <span>📊 Total Activity</span>
+                    <strong>{{ total_count }}</strong>
+                </div>
+            </div>
+
+            <div class="dashboard-panel">
+                <h2>🕘 History</h2>
+
+                {% if history %}
+                <div class="compact-history-list">
+
+                    {% for item in history %}
+                    <div class="compact-history-card">
+
+                        <div class="history-header">
+                            <span class="history-type">
+                                {% if item[0] == "Link to QR" %}
+                                    🔗 Link to QR
+                                {% else %}
+                                    📷 QR to Link
+                                {% endif %}
+                            </span>
+
+                            <span class="history-date">{{ item[4] }}</span>
+                        </div>
+
+                        {% if item[0] == "Link to QR" %}
+                            <p class="history-label">Original Link</p>
+                            <input type="text" value="{{ item[1] }}" readonly>
+
+                            {% if item[3] %}
+                            <div class="history-qr-box">
+                                <img src="{{ item[3] }}" class="history-qr-img">
+                                <a href="{{ item[3] }}" download class="open-btn">⬇️ Download QR</a>
+                            </div>
+                            {% endif %}
+
+                        {% else %}
+                            <p class="history-label">Decoded Link / Text</p>
+                            <input type="text" value="{{ item[2] }}" readonly>
+
+                            <button
+                                class="copy-btn"
+                                type="button"
+                                onclick="copyDashboardText(this)"
+                            >
+                                📋 Copy
+                            </button>
+
+                            {% if item[2].startswith("http") %}
+                            <a href="{{ item[2] }}" target="_blank" class="open-btn">
+                                🌐 Open Link
+                            </a>
+                            {% endif %}
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <h2>🕊️ No activity yet</h2>
+                    <p>Your generated QR codes and decoded links will appear here.</p>
+                    <a href="/" class="main-btn">Start Now</a>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+function copyDashboardText(button) {
+    const input = button.previousElementSibling;
+
+    input.select();
+    input.setSelectionRange(0, 99999);
+
+    navigator.clipboard.writeText(input.value);
+
+    alert("✅ Copied!");
+}
+</script>
+
+</body>
+</html>

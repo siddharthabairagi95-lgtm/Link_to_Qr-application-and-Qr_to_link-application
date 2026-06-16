@@ -12,13 +12,12 @@
     <div class="card hero">
 
         <div class="top-bar">
-            <div class="user-info">
-                👋 Hello, {{ username }}
-            </div>
+            <div class="user-info">👋 Hello, {{ username }}</div>
 
-            <a href="/logout" class="logout-btn">
-                🚪 Logout
-            </a>
+            <div class="nav-actions">
+                <a href="/dashboard" class="dashboard-btn">📊 Dashboard</a>
+                <a href="/logout" class="logout-btn">🚪 Logout</a>
+            </div>
         </div>
 
         <h1>🚀 QR Utility Suite</h1>
@@ -94,12 +93,7 @@
             <div class="result-box">
                 <h2>✅ Decoded Result</h2>
 
-                <input
-                    type="text"
-                    id="decodedLink"
-                    value="{{ decoded_text }}"
-                    readonly
-                >
+                <input type="text" id="decodedLink" value="{{ decoded_text }}" readonly>
 
                 <button onclick="copyLink()" class="copy-btn" type="button">📋 Copy Link</button>
 

@@ -3,6 +3,7 @@ import qrcode
 import os
 import cv2
 import sqlite3
+from datetime import datetime
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -15,8 +16,12 @@ os.makedirs(GENERATED_FOLDER, exist_ok=True)
 DATABASE = "users.db"
 
 
+def get_db():
+    return sqlite3.connect(DATABASE)
+
+
 def init_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -25,6 +30,19 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            action_type TEXT NOT NULL,
+            input_value TEXT,
+            output_value TEXT,
+            qr_image TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
 
@@ -63,7 +81,7 @@ def signup():
             hashed_password = generate_password_hash(password)
 
             try:
-                conn = sqlite3.connect(DATABASE)
+                conn = get_db()
                 cursor = conn.cursor()
 
                 cursor.execute(
@@ -90,7 +108,7 @@ def login():
         email = request.form.get("email")
         password = request.form.get("password")
 
-        conn = sqlite3.connect(DATABASE)
+        conn = get_db()
         cursor = conn.cursor()
 
         cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
@@ -128,24 +146,36 @@ def link_to_qr():
         if not link:
             error = "Please enter a valid link."
         else:
-            qr = qrcode.QRCode(
-                version=1,
-                box_size=10,
-                border=4
-            )
-
+            qr = qrcode.QRCode(version=1, box_size=10, border=4)
             qr.add_data(link)
             qr.make(fit=True)
 
-            img = qr.make_image(
-                fill_color="black",
-                back_color="white"
-            )
+            img = qr.make_image(fill_color="black", back_color="white")
 
-            filepath = os.path.join(GENERATED_FOLDER, "qr_code.png")
+            filename = f"qr_user_{session['user_id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+            filepath = os.path.join(GENERATED_FOLDER, filename)
             img.save(filepath)
 
             qr_image = filepath
+
+            conn = get_db()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO history
+                (user_id, action_type, input_value, output_value, qr_image, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                session["user_id"],
+                "Link to QR",
+                link,
+                "QR Code Generated",
+                qr_image,
+                datetime.now().strftime("%d %b %Y, %I:%M %p")
+            ))
+
+            conn.commit()
+            conn.close()
 
     return render_template(
         "index.html",
@@ -171,7 +201,12 @@ def qr_to_link():
             error = "Please upload a QR image."
         else:
             filename = secure_filename(file.filename)
-            filepath = os.path.join(GENERATED_FOLDER, filename)
+
+            filepath = os.path.join(
+                GENERATED_FOLDER,
+                f"user_{session['user_id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            )
+
             file.save(filepath)
 
             image = cv2.imread(filepath)
@@ -184,6 +219,26 @@ def qr_to_link():
 
                 if data:
                     decoded_text = data
+
+                    conn = get_db()
+                    cursor = conn.cursor()
+
+                    cursor.execute("""
+                        INSERT INTO history
+                        (user_id, action_type, input_value, output_value, qr_image, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        session["user_id"],
+                        "QR to Link",
+                        filepath,
+                        decoded_text,
+                        None,
+                        datetime.now().strftime("%d %b %Y, %I:%M %p")
+                    ))
+
+                    conn.commit()
+                    conn.close()
+
                 else:
                     error = "Could not read QR code. Please upload a clear QR image."
 
@@ -193,6 +248,56 @@ def qr_to_link():
         decoded_text=decoded_text,
         error=error,
         username=session.get("username")
+    )
+
+
+@app.route("/dashboard")
+def dashboard():
+    if not login_required():
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT action_type, input_value, output_value, qr_image, created_at
+        FROM history
+        WHERE user_id = ?
+        ORDER BY id DESC
+    """, (session["user_id"],))
+
+    history = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM history
+        WHERE user_id = ? AND action_type = 'Link to QR'
+    """, (session["user_id"],))
+    qr_count = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM history
+        WHERE user_id = ? AND action_type = 'QR to Link'
+    """, (session["user_id"],))
+    decoded_count = cursor.fetchone()[0]
+
+    total_count = qr_count + decoded_count
+
+    qr_percentage = round((qr_count / total_count) * 100, 1) if total_count > 0 else 0
+    decoded_percentage = round((decoded_count / total_count) * 100, 1) if total_count > 0 else 0
+
+    conn.close()
+
+    return render_template(
+        "dashboard.html",
+        history=history,
+        username=session.get("username"),
+        qr_count=qr_count,
+        decoded_count=decoded_count,
+        total_count=total_count,
+        qr_percentage=qr_percentage,
+        decoded_percentage=decoded_percentage
     )
 
 
